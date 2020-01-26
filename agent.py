@@ -13,7 +13,7 @@ UPDATE_EVERY = 4  # how often to update the network
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
-class Agent():
+class BaseAgent():
 	"""Interacts with and learns from the environment."""
 
 	def __init__(self, qnetwork, memory):
@@ -80,13 +80,7 @@ class Agent():
 			experiences (Tuple[torch.Variable]): tuple of (s, a, r, s', done) tuples
 			gamma (float): discount factor
 		"""
-		states, actions, rewards, next_states, dones = experiences
-
-		best_actions = self.qnetwork_local(states).argmax(dim=1, keepdim=True)
-		y_target = rewards + gamma * self.qnetwork_target(next_states).gather(1, best_actions) * (1 - dones)
-		self.qnetwork_local.optimize(self.qnetwork_local(states).gather(1, actions), y_target.detach())
-
-		self.soft_update(self.qnetwork_local, self.qnetwork_target, TAU)
+		pass
 
 	def soft_update(self, local_model, target_model, tau):
 		"""Soft update model parameters.
@@ -100,3 +94,40 @@ class Agent():
 		"""
 		for target_param, local_param in zip(target_model.parameters(), local_model.parameters()):
 			target_param.data.copy_(tau * local_param.data + (1.0 - tau) * target_param.data)
+
+class DQNAgent(BaseAgent):
+	"""Interacts with and learns from the environment."""
+
+	def learn(self, experiences, gamma):
+		"""Update value parameters using given batch of experience tuples.
+
+		Params
+		======
+			experiences (Tuple[torch.Variable]): tuple of (s, a, r, s', done) tuples
+			gamma (float): discount factor
+		"""
+		states, actions, rewards, next_states, dones = experiences
+		y_target = rewards + gamma * self.qnetwork_target(next_states).max(dim=1, keepdim=True)[0] * (1 - dones)
+		self.qnetwork_local.optimize(self.qnetwork_local(states).gather(1, actions), y_target.detach())
+
+		self.soft_update(self.qnetwork_local, self.qnetwork_target, TAU)
+
+
+class DoubleDQNAgent(BaseAgent):
+	"""Interacts with and learns from the environment."""
+
+	def learn(self, experiences, gamma):
+		"""Update value parameters using given batch of experience tuples.
+
+		Params
+		======
+			experiences (Tuple[torch.Variable]): tuple of (s, a, r, s', done) tuples
+			gamma (float): discount factor
+		"""
+		states, actions, rewards, next_states, dones = experiences
+
+		best_actions = self.qnetwork_local(states).argmax(dim=1, keepdim=True)
+		y_target = rewards + gamma * self.qnetwork_target(next_states).gather(1, best_actions) * (1 - dones)
+		self.qnetwork_local.optimize(self.qnetwork_local(states).gather(1, actions), y_target.detach())
+
+		self.soft_update(self.qnetwork_local, self.qnetwork_target, TAU)
