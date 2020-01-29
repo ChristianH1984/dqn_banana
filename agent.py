@@ -25,10 +25,6 @@ class BaseAgent():
 			action_size (int): dimension of each action
 			seed (int): random seed
 		"""
-		# self.state_size = state_size
-		# self.action_size = action_size
-		# self.seed = random.seed(seed)
-
 		# Q-Network
 		self.qnetwork_local = qnetwork.to(device)
 		self.qnetwork_target = qnetwork.clone().to(device)
@@ -132,22 +128,13 @@ class DoubleDQNAgent(BaseAgent):
 
 		self.soft_update(self.qnetwork_local, self.qnetwork_target, TAU)
 
+
 class PrioExpReplayAgent(BaseAgent):
 
 	def step(self, state, action, reward, next_state, done):
 		# Save experience in replay memory
-		state_torch = torch.from_numpy(state).float().unsqueeze(0).to(device)
-		next_state_torch = torch.from_numpy(next_state).float().unsqueeze(0).to(device)
-
-		#weight = reward + GAMMA * self.qnetwork_target(next_state_torch).max(dim=1, keepdim=True)[
-		#	0] - self.qnetwork_target(state_torch)[:, action]
-		#print("Agent weight", weight[0,0])
-		probs = self.memory.compute_probs()
-		if len(probs) == 0:
-			weight = 1.0
-		else:
-			weight = np.max(probs)
-		self.memory.add(state, action, reward, next_state, done, weight)
+		probabilities = self.memory.compute_probs()
+		self.memory.add(state, action, reward, next_state, done, 1.0 if len(probabilities) == 0 else np.max(probabilities))
 
 		# Learn every UPDATE_EVERY time steps.
 		self.t_step = (self.t_step + 1) % UPDATE_EVERY
@@ -157,19 +144,16 @@ class PrioExpReplayAgent(BaseAgent):
 				experiences = self.memory.sample()
 				self.learn(experiences, GAMMA)
 
-
 	def learn(self, experiences, gamma):
 		"""Update value parameters using given batch of experience tuples.
 
 		Params
 		======
-			experiences (Tuple[torch.Variable]): tuple of (s, a, r, s', done) tuples
+			experiences (Tuple[torch.Variable]): tuple of (s, a, r, s', done, index_of_sample) tuples
 			gamma (float): discount factor
 		"""
-		(states, actions, rewards, next_states, dones, weights, experiences_indices) = experiences
+		(states, actions, rewards, next_states, dones, experiences_indices) = experiences
 
-		#best_actions = self.qnetwork_local(states).argmax(dim=1, keepdim=True)
-		#y_target = rewards + gamma * self.qnetwork_target(next_states).gather(1, best_actions) * (1 - dones)
 		y_target = rewards + gamma * self.qnetwork_target(next_states).max(dim=1, keepdim=True)[0] * (1 - dones)
 		y_true = self.qnetwork_local(states).gather(1, actions)
 
@@ -177,7 +161,5 @@ class PrioExpReplayAgent(BaseAgent):
 		weights = self.memory.compute_weights(experiences_indices)
 
 		self.qnetwork_local.optimize(y_true, y_target.detach(), torch.from_numpy(weights.reshape(-1, 1)).to(device))
-
-		#self.qnetwork_local.optimize(y_true, y_target.detach())
 
 		self.soft_update(self.qnetwork_local, self.qnetwork_target, TAU)
