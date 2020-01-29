@@ -129,8 +129,9 @@ class PrioExpReplayAgent(BaseAgent):
 
 	def step(self, state, action, reward, next_state, done):
 		# Save experience in replay memory
-		probabilities = self.memory.compute_probs()
-		self.memory.add(state, action, reward, next_state, done, 1.0 if len(probabilities) == 0 else np.max(probabilities))
+		# probabilities = self.memory.compute_probs()
+		priorities = self.memory.priority_memory[:]
+		self.memory.add(state, action, reward, next_state, done, 1.0 if len(priorities) == 0 else np.max(priorities))
 
 		# Learn every UPDATE_EVERY time steps.
 		self.t_step = (self.t_step + 1) % self.update_every

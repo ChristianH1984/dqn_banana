@@ -53,6 +53,7 @@ dependencies:
   - numpy=1.18.1=py36h93ca92e_0
   - numpy-base=1.18.1=py36hc3f5095_1
   - olefile=0.46=py_0
+  - pandas=0.25.3=py36ha925a31_0
   - pandoc=2.2.3.2=0
   - pandocfilters=1.4.2=py36_1
   - parso=0.5.2=py_0
@@ -66,6 +67,7 @@ dependencies:
   - pyrsistent=0.15.6=py36he774522_0
   - python=3.6.10=h9f7ef89_0
   - python-dateutil=2.8.1=py_0
+  - pytz=2019.3=py_0
   - pywin32=227=py36he774522_1
   - pywinpty=0.5.7=py36_0
   - pyzmq=18.1.0=py36ha925a31_0

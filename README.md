@@ -22,4 +22,4 @@ Clone the github repo
 - cd dqn_banana
 - conda env create --name dqn_banana --file=environment.yml
 - activate dqn_banana
-- open Navigation.ipynb and have fun :-)
+- open Report.ipynb and have fun :-)
