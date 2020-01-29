@@ -1,7 +1,7 @@
 import numpy as np
 
 
-class DQN():
+class DQN(object):
 	def __init__(self, env, agent):
 		self.env = env
 		self.agent = agent
@@ -26,7 +26,9 @@ class DQN():
 				score += reward
 
 			scores.append(score)
-
+			if np.mean(scores[-100:]) > 13:
+				print("\nProblem solved after {0} episodes".format(i))
+				return scores
 			print('\rEpisode {}\tAverage Score: {:.2f}'.format(i, np.mean(scores[-20:])), end="")
 			if i % 100 == 0:
 				print('\rEpisode {}\tAverage Score: {:.2f}'.format(i, np.mean(scores[-20:])))

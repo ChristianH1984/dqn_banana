@@ -62,6 +62,9 @@ class ReplayBufferWeighted:
 			buffer_size (int): maximum size of buffer
 			batch_size (int): size of each training batch
 			seed (int): random seed
+			alpha (float): interpolation factor for sampling; 0 -> random uniform sampling, 1 -> priority sampling
+			beta (float): factor for update rule; 0 -> no modified update, 1 -> full correction for bias introduced
+			by prio sampling
 		"""
 		self.action_size = action_size
 		self.buffer_size = buffer_size
@@ -121,7 +124,7 @@ class ReplayBufferWeighted:
 		return 1.0 / np.max(weights) * weights
 
 
-class NumpyStorage(object):
+class NumpyStorage:
 	def __init__(self, maxlen):
 		self.maxlen = maxlen
 		self.storage = np.array([np.nan] * maxlen)
