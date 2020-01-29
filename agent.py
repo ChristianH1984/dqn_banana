@@ -131,3 +131,59 @@ class DoubleDQNAgent(BaseAgent):
 		self.qnetwork_local.optimize(self.qnetwork_local(states).gather(1, actions), y_target.detach())
 
 		self.soft_update(self.qnetwork_local, self.qnetwork_target, TAU)
+
+class PrioExpReplayAgent(BaseAgent):
+
+	def step(self, state, action, reward, next_state, done):
+		# Save experience in replay memory
+		state_torch = torch.from_numpy(state).float().unsqueeze(0).to(device)
+		next_state_torch = torch.from_numpy(next_state).float().unsqueeze(0).to(device)
+
+		#weight = reward + GAMMA * self.qnetwork_target(next_state_torch).max(dim=1, keepdim=True)[
+		#	0] - self.qnetwork_target(state_torch)[:, action]
+		#print("Agent weight", weight[0,0])
+		probs = self.memory.compute_probs()
+		if len(probs)==0:
+			weight=1.0
+		else:
+			weight=np.max(probs)
+		self.memory.add(state, action, reward, next_state, done, weight)
+
+		# Learn every UPDATE_EVERY time steps.
+		self.t_step = (self.t_step + 1) % UPDATE_EVERY
+		if self.t_step == 0:
+			# If enough samples are available in memory, get random subset and learn
+			if len(self.memory) > BATCH_SIZE:
+				experiences = self.memory.sample()
+				self.learn(experiences, GAMMA)
+
+
+	def learn(self, experiences, gamma):
+		"""Update value parameters using given batch of experience tuples.
+
+		Params
+		======
+			experiences (Tuple[torch.Variable]): tuple of (s, a, r, s', done) tuples
+			gamma (float): discount factor
+		"""
+		(states, actions, rewards, next_states, dones, weights, experiences_indices) = experiences
+
+		#best_actions = self.qnetwork_local(states).argmax(dim=1, keepdim=True)
+		#y_target = rewards + gamma * self.qnetwork_target(next_states).gather(1, best_actions) * (1 - dones)
+		y_target = rewards + gamma * self.qnetwork_target(next_states).max(dim=1, keepdim=True)[0] * (1 - dones)
+		y_true = self.qnetwork_local(states).gather(1, actions)
+
+		self.memory.update_weights((y_target-y_true).cpu().data.numpy().reshape(-1), experiences_indices)
+		probs = self.memory.compute_probs(indices=experiences_indices)
+		#print("probstype", type(probs))
+		#print("probs", probs.shape)
+		#print("buffer", self.memory.buffer_size)
+		#print("alpha", self.memory.alpha)
+		#print("weightstype", type(weights))
+		#print("weights", weights.shape)
+		weights2 = (probs * len(self.memory))**(-0.5) #* weights
+		weights2 = 1/np.max(weights2) * weights2 #* weights
+		self.qnetwork_local.optimize(y_true, y_target.detach(), torch.from_numpy(weights2.reshape(-1, 1)).to(device))
+		#self.qnetwork_local.optimize(y_true, y_target.detach())
+
+		self.soft_update(self.qnetwork_local, self.qnetwork_target, TAU)

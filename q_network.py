@@ -29,8 +29,7 @@ class QNetwork(nn.Module):
 			('relu1', nn.ReLU()),
 			('fc2', nn.Linear(hidden_sizes[0], hidden_sizes[1])),
 			('relu2', nn.ReLU()),
-			('logits', nn.Linear(hidden_sizes[1], output_size)),
-			#    ('sigmoid', nn.Tanh())
+			('logits', nn.Linear(hidden_sizes[1], output_size))
 		]))
 
 		self.loss = nn.MSELoss()
@@ -40,9 +39,13 @@ class QNetwork(nn.Module):
 		"""Build a network that maps state -> action values."""
 		return self.model.forward(state)
 
-	def optimize(self, y_orig, y_target):
-		loss = self.loss(y_orig, y_target)
-
+	def optimize(self, y_orig, y_target, weights=None):
+		if weights is not None:
+			#print("w in loss", weights.shape)
+			#print("loss", self.loss(y_orig, y_target).shape)
+			loss = weighted_mse_loss(y_orig, y_target, weights)#self.loss(y_orig, y_target).squeeze() * weights
+		else:
+			loss = self.loss(y_orig, y_target)
 		self.optimizer.zero_grad()
 		loss.backward()
 		self.optimizer.step()
@@ -53,3 +56,9 @@ class QNetwork(nn.Module):
 		qnetwork_clone = QNetwork(state_size, action_size)
 		qnetwork_clone.model = copy.deepcopy(self.model)
 		return qnetwork_clone
+
+def weighted_mse_loss(input, target, weights):
+	out = (input - target) ** 2
+	out = out * weights.expand_as(out)
+	loss = out.mean(0)
+	return loss
