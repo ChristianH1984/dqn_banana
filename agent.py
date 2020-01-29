@@ -174,16 +174,10 @@ class PrioExpReplayAgent(BaseAgent):
 		y_true = self.qnetwork_local(states).gather(1, actions)
 
 		self.memory.update_weights((y_target-y_true).cpu().data.numpy().reshape(-1), experiences_indices)
-		probs = self.memory.compute_probs(indices=experiences_indices)
-		#print("probstype", type(probs))
-		#print("probs", probs.shape)
-		#print("buffer", self.memory.buffer_size)
-		#print("alpha", self.memory.alpha)
-		#print("weightstype", type(weights))
-		#print("weights", weights.shape)
-		weights2 = (probs * len(self.memory))**(-0.5) #* weights
-		weights2 = 1/np.max(weights2) * weights2 #* weights
-		self.qnetwork_local.optimize(y_true, y_target.detach(), torch.from_numpy(weights2.reshape(-1, 1)).to(device))
+		weights = self.memory.compute_weights(experiences_indices)
+
+		self.qnetwork_local.optimize(y_true, y_target.detach(), torch.from_numpy(weights.reshape(-1, 1)).to(device))
+
 		#self.qnetwork_local.optimize(y_true, y_target.detach())
 
 		self.soft_update(self.qnetwork_local, self.qnetwork_target, TAU)

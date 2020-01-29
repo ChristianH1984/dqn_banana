@@ -52,7 +52,7 @@ class ReplayBuffer:
 class ReplayBufferWeighted:
 	"""Fixed-size buffer to store experience tuples."""
 
-	def __init__(self, action_size, buffer_size, batch_size, seed, alpha=1.0, eps=0.01):
+	def __init__(self, action_size, buffer_size, batch_size, seed, alpha=1.0, beta=0.5, eps=0.01):
 		"""Initialize a ReplayBuffer object.
 
 		Params
@@ -69,6 +69,7 @@ class ReplayBufferWeighted:
 		self.experience = namedtuple("Experience", field_names=["state", "action", "reward", "next_state", "done", "weight"])
 		self.seed = random.seed(seed)
 		self.alpha = alpha
+		self.beta = beta
 		self.eps = eps
 
 	def add(self, state, action, reward, next_state, done, weight=1.0):
@@ -118,4 +119,15 @@ class ReplayBufferWeighted:
 		if len(weights) == 0:
 			return np.array([])
 		return 1/np.sum(weights) * weights
+
+	def compute_weights(self, experiences_indices):
+		probs = self.compute_probs(indices=experiences_indices)
+		# print("probstype", type(probs))
+		# print("probs", probs.shape)
+		# print("buffer", self.memory.buffer_size)
+		# print("alpha", self.memory.alpha)
+		# print("weightstype", type(weights))
+		# print("weights", weights.shape)
+		weights = (probs * len(self.memory)) ** (-self.beta)  # * weights
+		return 1.0 / np.max(weights) * weights  # * weights
 
